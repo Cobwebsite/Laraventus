@@ -2,7 +2,6 @@
     "name": "aventus/laraventus",
     "type": "library",
     "description": "A Laravel overlay providing extra tools and abstractions to accelerate application development.",
-    "version": "0.0.1",
     "license": "MIT",
     "autoload": {
         "psr-4": {
