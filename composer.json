@@ -1,0 +1,31 @@
+{
+    "name": "aventus/laraventus",
+    "type": "library",
+    "description": "A Laravel overlay providing extra tools and abstractions to accelerate application development.",
+    "version": "0.0.1",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Aventus\\Laraventus\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Cobwebsite",
+            "email": "info@cobwebsite.ch"
+        }
+    ],
+    "require": {
+        "illuminate/http": "^12.0",
+        "illuminate/container": "^12.0",
+        "illuminate/view": "^12.0",
+        "laravel/framework": "^12.0"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Aventus\\Laraventus\\ServiceProvider"
+            ]
+        }
+    }
+}

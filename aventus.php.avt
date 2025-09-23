@@ -1,0 +1,22 @@
+{
+    "output": "../front/src/generated",
+    "exportEnumByDefault": false,
+    "exportErrorsByDefault": false,
+    "exportHttpRequestByDefault": false,
+    "exportHttpResourceByDefault": false,
+    "exportHttpRouteByDefault": false,
+    "exportStorableByDefault": false,
+    "httpRouter": {
+        "createRouter": false
+    },
+    "replacer": {
+        "all": {
+            "type": {
+                "BackedEnum": {
+                    "result": "Enum"
+                }
+            }
+        }
+    },
+    "useNamespace": true
+}
