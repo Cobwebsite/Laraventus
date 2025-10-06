@@ -2,12 +2,11 @@
 
 namespace Aventus\Laraventus\Controllers;
 
-use App\Models\User;
-use App\Http\Controllers\Controller;
 use Aventus\Laraventus\Models\AventusModel;
 use Aventus\Laraventus\Requests\AventusRequest;
+use Aventus\Laraventus\Requests\IdsManyRequest;
+use Aventus\Laraventus\Requests\ItemsManyRequest;
 use Aventus\Laraventus\Resources\AventusModelResource;
-use Aventus\Laraventus\Tools\Console;
 
 /**
  * @template T of AventusModel
@@ -71,6 +70,22 @@ abstract class ModelController
     }
 
     /**
+     * Store a newly created resource in storage.
+     * @return R[]
+     */
+    public function storeMany(ItemsManyRequest $request): array
+    {
+        $model = $this->defineModel();
+        $ids = [];
+        foreach ($request->items as $data) {
+            $item = new $model($data);
+            $item->save();
+            $ids[] = $item->id;
+        }
+        return $this->showMany($ids);
+    }
+
+    /**
      * Display the specified resource.
      * @return R
      */
@@ -78,6 +93,21 @@ abstract class ModelController
     {
         $res = $this->defineResource();
         return new $res($this->defineModel()::find($id));
+    }
+
+    /**
+     * Display the specified resource.
+     * @return R[]
+     */
+    public function showMany(IdsManyRequest|array $request): array
+    {
+        if ($request instanceof IdsManyRequest) {
+            $ids = $request->ids;
+        }
+        else {
+            $ids = $request;
+        }
+        return $this->defineResource()::collection($this->defineModel()::whereIn("id", $ids)->get());
     }
 
     /**
@@ -95,10 +125,35 @@ abstract class ModelController
     }
 
     /**
+     * Update the specified resource in storage.
+     * @return R[]
+     */
+    public function updateMany(ItemsManyRequest $request): array
+    {
+        $model = $this->defineModel();
+        $ids = [];
+        foreach ($request->items as $data) {
+            $item = new $model($data);
+            $item->exists = true;
+            $item->save();
+            $ids[] = $item->id;
+        }
+        return $this->showMany($ids);
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(int $id): bool
     {
         return $this->defineModel()::where('id', $id)->delete();
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroyMany(IdsManyRequest $request): bool
+    {
+        return $this->defineModel()::whereIn('id', $request->ids)->delete();
     }
 }

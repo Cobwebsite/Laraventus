@@ -38,8 +38,6 @@ class AventusRequest extends FormRequest
             $request->files->all(),
             $request->server->all()
         );
-
-
     }
 
     /**
@@ -240,5 +238,21 @@ class AventusRequest extends FormRequest
         $defaultValues = $this->post();
         $defaultValues = is_array($defaultValues) ? $defaultValues : [];
         return new $model($defaultValues);
+    }
+
+    /**
+     * @template U
+     * @param class-string<U> $model
+     * @return U[]
+     */
+    public function toModels(string $model)
+    {
+        $list = $this->post();
+        $list = is_array($list) ? $list : [];
+        $result = [];
+        foreach ($list as $defaultValues) {
+            $result[] = new $model($defaultValues);
+        }
+        return $result;
     }
 }

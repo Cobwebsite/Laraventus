@@ -23,13 +23,6 @@ abstract class AventusAutoBindResource extends AventusModelResource implements J
         $this->bind($item);
     }
 
-    /**
-     * Define if the resource must be autobinded
-     * If you need to avoid some keys you can override the function `avoidAutobBind`
-     * @return void
-     */
-    protected abstract function needAutoBind(): bool;
-
 
     /**
      * Define the keys that must not be auto binded
@@ -39,7 +32,7 @@ abstract class AventusAutoBindResource extends AventusModelResource implements J
     {
         return [];
     }
-    
+
     /**
      * Summary of autoBind
      * @param T $item
@@ -61,4 +54,11 @@ abstract class AventusAutoBindResource extends AventusModelResource implements J
             }
         }
     }
+
+    /**
+     * Summary of autoBind
+     * @param T $item
+     * @return void
+     */
+    protected function bind($item): void {}
 }
