@@ -11,6 +11,7 @@ use Throwable;
 
 abstract class AventusModel extends Model
 {
+    private bool $only_fillable = true;
     /**
      * Create a new Eloquent model instance.
      *
@@ -20,6 +21,7 @@ abstract class AventusModel extends Model
     public function __construct(array $attributes = [])
     {
         $this->timestamps = config('laraventus.model.timestamps') ?? true;
+        $this->only_fillable = config('laraventus.model.only_fillable') ?? true;
         $unfillable = array_diff_key($attributes, array_flip($this->getFillable()));
         $attrs = [];
         foreach ($attributes as $key => $value) {
@@ -28,10 +30,9 @@ abstract class AventusModel extends Model
             }
         }
         parent::__construct($attrs);
-
-        if (count($unfillable) > 0) {
+        
+        if (!$this->only_fillable && count($unfillable) > 0) {
             $deny = $this->preventKeys();
-            $reflection = new ReflectionClass(get_called_class());
             foreach ($unfillable as $key => $value) {
                 if (!in_array($key, $deny)) {
                     $this->{$key} = $value;
@@ -48,37 +49,4 @@ abstract class AventusModel extends Model
         return ["\$type"];
     }
 
-
-    /**
-     * Perform any actions required before the model boots.
-     *
-     * @return void
-     */
-    protected static function booting()
-    {
-        //self::loadingAttributes();
-    }
-
-
-    protected static $dbAttributes = [];
-    protected static function loadingAttributes()
-    {
-        $reflection = new \ReflectionClass(get_called_class());
-        $properties = $reflection->getProperties();
-        foreach ($properties as $property) {
-            $isColumn = count($property->getAttributes(
-                Column::class,
-                ReflectionAttribute::IS_INSTANCEOF
-            )) > 0;
-
-            if ($isColumn) {
-                self::$dbAttributes[] = $property->getName();
-            }
-        }
-    }
-
-    public function save(array $options = [])
-    {
-        parent::save($options);
-    }
 }
