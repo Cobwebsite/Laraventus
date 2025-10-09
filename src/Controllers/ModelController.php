@@ -7,6 +7,7 @@ use Aventus\Laraventus\Requests\AventusRequest;
 use Aventus\Laraventus\Requests\IdsManyRequest;
 use Aventus\Laraventus\Requests\ItemsManyRequest;
 use Aventus\Laraventus\Resources\AventusModelResource;
+use Aventus\Laraventus\Tools\Console;
 
 /**
  * @template T of AventusModel
@@ -65,8 +66,16 @@ abstract class ModelController
         /** @var AventusRequest $request */
         $request = app($this->defineRequest());
         $item = $request->toModel($this->defineModel());
-        $item->save();
+        $this->storeAction($item);
         return $this->show($item->id);
+    }
+
+    /**
+     * @param T $item
+     */
+    protected function storeAction($item): void
+    {
+        $item->save();
     }
 
     /**
@@ -79,7 +88,7 @@ abstract class ModelController
         $ids = [];
         foreach ($request->items as $data) {
             $item = new $model($data);
-            $item->save();
+            $this->storeAction($item);
             $ids[] = $item->id;
         }
         return $this->showMany($ids);
@@ -103,8 +112,7 @@ abstract class ModelController
     {
         if ($request instanceof IdsManyRequest) {
             $ids = $request->ids;
-        }
-        else {
+        } else {
             $ids = $request;
         }
         return $this->defineResource()::collection($this->defineModel()::whereIn("id", $ids)->get());
@@ -120,8 +128,16 @@ abstract class ModelController
         $item = $request->toModel($this->defineModel());
         $item->id = $id;
         $item->exists = true;
-        $item->save();
+        $this->updateAction($item);
         return $this->show($item->id);
+    }
+
+    /**
+     * @param T $item
+     */
+    protected function updateAction($item): void
+    {
+        $item->save();
     }
 
     /**
@@ -135,7 +151,7 @@ abstract class ModelController
         foreach ($request->items as $data) {
             $item = new $model($data);
             $item->exists = true;
-            $item->save();
+            $this->updateAction($item);
             $ids[] = $item->id;
         }
         return $this->showMany($ids);
