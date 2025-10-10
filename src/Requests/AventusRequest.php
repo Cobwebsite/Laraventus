@@ -5,9 +5,14 @@ namespace Aventus\Laraventus\Requests;
 use Aventus\Laraventus\Attributes\ArrayOf;
 use Aventus\Laraventus\Attributes\NoExport;
 use Aventus\Laraventus\Models\AventusFile;
+use Aventus\Laraventus\Models\AventusModel;
 use Aventus\Laraventus\Requests\Rules\Boolean;
 use Aventus\Laraventus\Tools\Console;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -255,27 +260,67 @@ class AventusRequest extends FormRequest
             $prevents[] = $property->getName();
         }
 
+        $reflection = new ReflectionClass($model);
+        $_methods = $reflection->getMethods(ReflectionProperty::IS_PUBLIC);
+        $methods = [];
+
+        foreach ($_methods as $method) {
+            $returnType = $method->getReturnType();
+            if ($returnType instanceof ReflectionNamedType) {
+                if ($returnType->getName() == HasOne::class) {
+                    $name = $method->getName();
+                    $methods[$name] = "HasOne";
+                } else if ($returnType->getName() == HasMany::class) {
+                    $name = $method->getName();
+                    $methods[$name] = "HasMany";
+                } else if ($returnType->getName() == BelongsTo::class) {
+                    $name = $method->getName();
+                    $methods[$name] = "BelongsTo";
+                } else if ($returnType->getName() == BelongsToMany::class) {
+                    $name = $method->getName();
+                    $methods[$name] = "BelongsToMany";
+                }
+            }
+        }
+
         $data = [];
+        $links = [];
+        $denyLinks = $this->save_links();
         foreach ($properties as $property) {
             $name = $property->getName();
             if (in_array($name, $prevents))
                 continue;
 
             $data[$name] = $this->$name;
+
+            if($denyLinks != null && !in_array($name, $denyLinks)) {
+                continue;
+            }
+            if (array_key_exists($name, $methods)) {
+                $links[$name] = $methods[$name];
+            }
         }
 
+        /** @var AventusModel $result */
         $result = new $model($data);
+        $result->__links = $links;
+
         if ($result->only_fillable) {
             foreach ($data as $key => $value) {
                 if (!$result->isRelation($key)) {
-                    if(is_array($value)) {
+                    if (is_array($value)) {
                         $value = new Collection($value);
                     }
-                    $this->setRelation($key, $value);
+                    $result->setRelation($key, $value);
                 }
             }
         }
         return $result;
+    }
+
+    protected function save_links(): null|array
+    {
+        return null;
     }
 
     // /**
