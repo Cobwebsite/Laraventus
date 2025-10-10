@@ -63,6 +63,27 @@ abstract class AventusModel extends Model
         return ["\$type", "__path"];
     }
 
+    public function syncHasMany($name) {
+        $currentItem = self::find($this->id);
+        $existingIds = $currentItem->{$name}()->pluck('id')->toArray();
+        $newList = $this->{$name};
+        $newIds = $newList->pluck('id')->filter()->toArray();
+
+        $idsToDelete = array_diff($existingIds, $newIds);
+        $this->{$name}()->whereIn('id', $idsToDelete)->delete();
+
+        foreach ($newList->whereIn('id', $existingIds) as $newItem) {
+            $updateItem = $this->{$name}()->find($newItem->id);
+            $updateItem->fill($newItem);
+            $updateItem->save();
+        }
+
+        $newOnes = $newList->whereNull('id')
+            ->merge($newList->where('id', 0));
+
+        $this->{$name}()->createMany($newOnes->toArray());
+    }
+
     // public function analyse()
     // {
     //     $className = get_called_class();
