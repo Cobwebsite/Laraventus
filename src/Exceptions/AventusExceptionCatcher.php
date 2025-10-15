@@ -30,7 +30,7 @@ class AventusExceptionCatcher
 
     public static function toAventusError(Throwable $e, Request $request)
     {
-        // Console::log($e);
+        Console::log($e);
         $errors = [];
         $code = LaraventusErrorEnum::UnknowError->value;
         if ($e instanceof ValidationException) {

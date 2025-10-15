@@ -2,18 +2,27 @@
 
 namespace Aventus\Laraventus\Models;
 
-use Aventus\Laraventus\Tools\Console;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Contracts\Filesystem\Filesystem;
+use ReflectionClass;
 
 /**
  * 
  */
 abstract class AventusFile implements CastsAttributes
 {
+    public function __construct($attributes = [])
+    {
+        $reflection = new ReflectionClass(get_called_class());
+        foreach ($attributes as $key => $value) {
+            $hasProp = $reflection->hasProperty($key);
+            if ($hasProp && $value != null)
+                $this->{$key} = $value;
+        }
+    }
     /**
      * Get from the db
      */

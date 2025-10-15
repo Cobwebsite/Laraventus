@@ -1,5 +1,5 @@
 {
-    "output": "../front/src/generated",
+    "output": "../AventusPhp/src/generated",
     "exportEnumByDefault": false,
     "exportErrorsByDefault": false,
     "exportHttpRequestByDefault": false,
@@ -11,12 +11,15 @@
     },
     "replacer": {
         "all": {
-            "type": {
-                "BackedEnum": {
-                    "result": "Enum"
+            "result": {
+                "AventusPhp.IdsManyRequest": {
+                    "result": "IdsManyRequest"
+                },
+                "AventusPhp.ItemsManyRequest": {
+                    "result": "ItemsManyRequest"
                 }
             }
         }
     },
-    "useNamespace": true
+    "useNamespace": false
 }

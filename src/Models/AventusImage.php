@@ -2,6 +2,7 @@
 
 namespace Aventus\Laraventus\Models;
 
+use Exception;
 use Intervention\Image\ImageManager;
 
 /**
@@ -19,6 +20,9 @@ abstract class AventusImage extends AventusFile
 
             $maxSize = $this->max_size();
             $extension = $this->force_extension();
+            if($extension === true) {
+                throw new Exception("Impossible to have a true as return value of force_extension");
+            }
             $sameExtension = $extension == false || $extension == $this->upload->getClientOriginalExtension();
             if ($maxSize["width"] == null && $maxSize["height"] == null && $sameExtension) {
                 $path = $fs->putFileAs($base_directory, $file, $filename);
@@ -47,11 +51,18 @@ abstract class AventusImage extends AventusFile
             $this->uri = $this->get_uri($path);
         }
     }
-
+    /**
+     * Define max size for your image.
+     * If the value of width or height is null, the size will be auto adapted
+     * If the value of width an height is null, the size will be the same as uploaded
+     */
     protected function max_size()
     {
         return ["width" => null, "height" => null];
     }
+    /**
+     * Return the file extension you need for example cast all images to webp
+     */
     protected function force_extension(): bool|string
     {
         return false;
