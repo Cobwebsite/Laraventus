@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as Collection2;
 
 /**
- * Summary of AventusResource
  * @template T of AventusModel = AventusModel
  */
 abstract class AventusModelResource extends AventusResource
