@@ -7,6 +7,7 @@ use Aventus\Laraventus\Requests\AventusRequest;
 use Aventus\Laraventus\Requests\IdsManyRequest;
 use Aventus\Laraventus\Requests\ItemsManyRequest;
 use Aventus\Laraventus\Resources\AventusModelResource;
+use Aventus\Laraventus\Tools\Console;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
@@ -127,7 +128,15 @@ abstract class ModelController
     public function show(int|string $id): AventusModelResource
     {
         $res = $this->defineResourceDetails();
-        return new $res($this->defineModel()::find($id));
+        return new $res($this->showAction($id));
+    }
+
+    /**
+     * @return T
+     */
+    protected function showAction(int|string $id): AventusModel|null
+    {
+        return $this->defineModel()::find($id);
     }
 
     /**
@@ -204,6 +213,23 @@ abstract class ModelController
      */
     public function destroy(int|string $id): bool
     {
+        DB::beginTransaction();
+        try {
+            $res = $this->destroyAction($id);
+            DB::commit();
+            return $res;
+        } catch (Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+        return false;
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    protected function destroyAction(int|string $id): bool
+    {
         return $this->defineModel()::where('id', $id)->delete();
     }
 
@@ -212,6 +238,23 @@ abstract class ModelController
      */
     public function destroyMany(IdsManyRequest $request): bool
     {
-        return $this->defineModel()::whereIn('id', $request->ids)->delete();
+        DB::beginTransaction();
+        try {
+            $res = $this->destroyManyAction($request->ids);
+            DB::commit();
+            return $res;
+        } catch (Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+        return false;
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    protected function destroyManyAction(array $ids): bool
+    {
+        return $this->defineModel()::whereIn('id', $ids)->delete();
     }
 }

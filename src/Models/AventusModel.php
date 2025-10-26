@@ -2,6 +2,7 @@
 
 namespace Aventus\Laraventus\Models;
 
+use Aventus\Laraventus\Tools\Console;
 use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -15,6 +16,7 @@ use ReflectionProperty;
 
 abstract class AventusModel extends Model
 {
+    public static bool $debug = false;
     /** @var array<string, ModelInfo> */
     private static array $info = [];
     public bool $only_fillable = true;
@@ -125,7 +127,6 @@ abstract class AventusModel extends Model
             $existingIds = $currentItem->{$name}()->pluck($relationKey)->toArray();
             $newList = $this->{$name};
             $newIds = $newList->pluck($relationKey)->filter()->toArray();
-
             $idsToDelete = array_diff($existingIds, $newIds);
             $this->{$name}()->whereIn($relationKey, $idsToDelete)->delete();
 
@@ -134,6 +135,9 @@ abstract class AventusModel extends Model
                 if ($newItem instanceof Model) {
                     $updateItem = $this->{$name}()->find($newItem->{$relationKey});
                     $dataArr = $newItem->toArray();
+                } else if (is_object($newItem)) {
+                    $updateItem = $this->{$name}()->find($newItem->{$relationKey});
+                    $dataArr = get_object_vars($newItem);
                 } else {
                     $updateItem = $this->{$name}()->find($newItem[$relationKey]);
                     $dataArr = $newItem;
@@ -149,6 +153,10 @@ abstract class AventusModel extends Model
                 if ($newItem instanceof Model) {
                     if (!isset($newItem->{$relationKey}) || $newItem->{$relationKey} == 0) {
                         $dataArr = $newItem->toArray();
+                    }
+                } else if (is_object($newItem)) {
+                    if (!isset($newItem->{$relationKey}) || $newItem->{$relationKey} == 0) {
+                        $dataArr = get_object_vars($newItem);
                     }
                 } else {
                     if (!isset($newItem[$relationKey]) || $newItem[$relationKey] == 0) {
@@ -195,6 +203,15 @@ abstract class AventusModel extends Model
             if ($newItem instanceof Model) {
                 if ($newItem->{$relationKey} && $existingItem->{$relationKey} === $newItem->{$relationKey}) {
                     $existingItem->fill($newItem->toArray());
+                    $existingItem->save();
+                } else {
+                    $existingItem->delete();
+                    $relation->save($newItem);
+                }
+            } else if (is_object($newItem)) {
+                if ($newItem->{$relationKey} && $existingItem->{$relationKey} === $newItem->{$relationKey}) {
+                    $dataArr = get_object_vars($newItem);
+                    $existingItem->fill($dataArr);
                     $existingItem->save();
                 } else {
                     $existingItem->delete();
@@ -329,6 +346,24 @@ abstract class AventusModel extends Model
         }
         parent::fill($attrs);
 
+        $reflection = new ReflectionClass(get_class($this));
+        $methods = $reflection->getMethods();
+        foreach ($methods as $method) {
+            if ($this->isRelation($method->name) && isset($attributes[$method->name])) {
+                $value = $attributes[$method->name];
+                if (is_array($value)) {
+                    $value = new Collection($value);
+                }
+                $this->setRelation($key, $value);
+            }
+        }
+
+        if (self::$debug && count($attributes) > 0) {
+            Console::log("--------------------------");
+            Console::log(get_class($this));
+            Console::dump($this);
+            Console::log("--------------------------");
+        }
         if (!$this->only_fillable && count($unfillable) > 0) {
             $deny = $this->preventKeys();
             foreach ($unfillable as $key => $value) {

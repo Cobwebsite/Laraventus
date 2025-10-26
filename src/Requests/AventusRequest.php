@@ -8,7 +8,9 @@ use Aventus\Laraventus\Models\AventusFile;
 use Aventus\Laraventus\Models\AventusModel;
 use Aventus\Laraventus\Requests\Rules\Boolean;
 use Aventus\Laraventus\Tools\Console;
+use Aventus\Laraventus\Tools\Json;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -192,6 +194,7 @@ class AventusRequest extends FormRequest
 
     private function bindProperties()
     {
+        AventusModel::$debug = true;
         $reflection = new ReflectionClass(get_called_class());
         $properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC);
 
@@ -211,7 +214,7 @@ class AventusRequest extends FormRequest
                 continue;
             }
 
-            $valueTemp = $this->input($name);
+            $valueTemp = Json::toClassObj($this->input($name));
             if (isset($this->$name) && $valueTemp == null) {
                 continue;
             }
@@ -219,15 +222,40 @@ class AventusRequest extends FormRequest
             if (array_key_exists($name, $this->arrayClassToCreate)) {
                 $defaultValues = is_array($valueTemp) ? $valueTemp : [];
                 $this->$name = [];
-                foreach ($defaultValues as $value) {
-                    $this->$name[] = new $this->arrayClassToCreate[$name]($value);
+                if (is_a($this->arrayClassToCreate[$name], Model::class, true)) {
+                    foreach ($defaultValues as $value) {
+                        if (is_object($value) && is_a(get_class($value), $this->arrayClassToCreate[$name], true)) {
+                            $this->$name[] = $value;
+                        } else {
+                            $this->$name[] = new $this->arrayClassToCreate[$name]((array)$value);
+                        }
+                    }
+                } else {
+                    foreach ($defaultValues as $value) {
+                        $newItem = new $this->arrayClassToCreate[$name]();
+                        foreach ($value as $key => $v) {
+                            $newItem->{$key} = $v;
+                        }
+                        $this->$name[] = $newItem;
+                    }
                 }
             } else if (array_key_exists($name, $this->classToCreate)) {
-                $defaultValues = is_array($valueTemp) ? $valueTemp : [];
-                if (in_array($name, $this->filesName)) {
-                    $defaultValues["upload"] = $this->file($name . ".upload");
+                if (is_object($valueTemp) && is_a(get_class($valueTemp), $this->classToCreate[$name], true)) {
+                    $this->{$name} = $valueTemp;
+                } else {
+                    $defaultValues = is_array($valueTemp) ? $valueTemp : [];
+                    if (in_array($name, $this->filesName)) {
+                        $defaultValues["upload"] = $this->file($name . ".upload");
+                    }
+                    if (is_a($this->classToCreate[$name], Model::class, true)) {
+                        $this->{$name} = new $this->classToCreate[$name]($defaultValues);
+                    } else {
+                        $this->{$name} = new $this->classToCreate[$name]();
+                        foreach ($defaultValues as $key => $value) {
+                            $this->{$name}->{$key} = $value;
+                        }
+                    }
                 }
-                $this->$name = new $this->classToCreate[$name]($defaultValues);
             } else if (array_key_exists($name, $this->enums)) {
                 if ($valueTemp != null) {
                     $valueTemp = $this->enums[$name]::from($valueTemp);
@@ -241,6 +269,7 @@ class AventusRequest extends FormRequest
                 $this->{$name} = $valueTemp;
             }
         }
+        AventusModel::$debug = false;
     }
 
     /**

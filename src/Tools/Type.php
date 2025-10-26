@@ -4,6 +4,7 @@ namespace Aventus\Laraventus\Tools;
 
 use Aventus\Laraventus\Parser\FileVisitor;
 use Exception;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
 use PhpParser\Modifiers;
@@ -33,7 +34,12 @@ class Type
     }
     public static function enrich($data): mixed
     {
-        if (is_object($data) && !($data instanceof UnitEnum)) {
+        if (is_a($data, Collection::class, true)) {
+            // Parcourir les tableaux pour enrichir récursivement
+            foreach ($data as &$item) {
+                $item = Type::enrich($item);
+            }
+        } else if (is_object($data) && !($data instanceof UnitEnum)) {
 
             foreach (self::$avoidEnrich as $class) {
                 if (is_a($data, $class, true)) {
@@ -71,5 +77,4 @@ class Type
 
         return $data;
     }
-
 }
