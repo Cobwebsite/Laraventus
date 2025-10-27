@@ -314,7 +314,7 @@ class AventusRequest extends FormRequest
 
         $data = [];
         $links = [];
-        $denyLinks = $this->save_links();
+        $saveLinks = $this->save_links();
         foreach ($properties as $property) {
             $name = $property->getName();
             if (in_array($name, $prevents))
@@ -322,17 +322,71 @@ class AventusRequest extends FormRequest
 
             $data[$name] = $this->$name;
 
-            if ($denyLinks != null && !in_array($name, $denyLinks)) {
-                continue;
-            }
-            if (array_key_exists($name, $methods)) {
+            if ($saveLinks == null && array_key_exists($name, $methods)) {
                 $links[$name] = $methods[$name];
             }
         }
 
         /** @var AventusModel $result */
         $result = new $model($data);
-        $result->saveLinks = $links;
+
+        if ($saveLinks != null) {
+            $result->saveLinks = [];
+            foreach ($saveLinks as $saveLink) {
+                $parts = explode(".", $saveLink);
+
+                $loop = function ($obj, $parts) use (&$loop) {
+                    if (count($parts) == 0) return;
+                    $part = $parts[0];
+                    if ($obj instanceof AventusModel) {
+                        if ($obj->isRelation($part)) {
+                            $reflection = new ReflectionClass(get_class($obj));
+                            $method = $reflection->getMethod($part);
+                            $returnType = $method->getReturnType();
+                            if ($returnType instanceof ReflectionNamedType) {
+                                $default = null;
+                                if ($returnType->getName() == HasOne::class) {
+                                    $obj->saveLinks[$part] = "HasOne";
+                                } else if ($returnType->getName() == HasMany::class) {
+                                    $obj->saveLinks[$part] = "HasMany";
+                                    $default = new Collection();
+                                } else if ($returnType->getName() == BelongsTo::class) {
+                                    $obj->saveLinks[$part] = "BelongsTo";
+                                } else if ($returnType->getName() == BelongsToMany::class) {
+                                    $obj->saveLinks[$part] = "BelongsToMany";
+                                    $default = new Collection();
+                                }
+
+                                Console::log("--------------------------------------");
+                                Console::log("save links : " . $part . " " . $obj->saveLinks[$part]);
+
+                                if (!$obj->relationLoaded($part)) {
+                                    $obj->setRelation($part, $default);
+                                }
+
+                                $value = $obj->{$part};
+
+                                array_shift($parts);
+                                if ($value instanceof Collection) {
+                                    foreach ($value as $item) {
+                                        $loop($item, $parts);
+                                    }
+                                } else {
+                                    $loop($value, $parts);
+                                }
+                            }
+                        }
+                    }
+                };
+
+                $loop($result, $parts);
+            }
+        } else {
+            $result->saveLinks = $links;
+        }
+
+
+
 
         if ($result->only_fillable) {
             foreach ($data as $key => $value) {
@@ -344,9 +398,16 @@ class AventusRequest extends FormRequest
                 }
             }
         }
+
+        // define sub link
+
         return $result;
     }
 
+    /**
+     * List relations to save
+     * @return null|string[]
+     */
     protected function save_links(): null|array
     {
         return null;

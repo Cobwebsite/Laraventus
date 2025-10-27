@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use ReflectionClass;
 use ReflectionNamedType;
 use ReflectionProperty;
@@ -118,11 +119,14 @@ abstract class AventusModel extends Model
     public function syncHasMany($name)
     {
         if ($this->__isNew()) {
+            Console::dump("inside-1");
             $this->{$name}()->saveMany($this->{$name});
         } else {
             $currentItem = self::find($this->__getPrimary());
+            /** @var HasMany $relation  */
             $relation = $currentItem->{$name}();
             $relationKey = $relation->getRelated()->getKeyName();
+            $relationModel = get_class($relation->getRelated());
 
             $existingIds = $currentItem->{$name}()->pluck($relationKey)->toArray();
             $newList = $this->{$name};
@@ -150,21 +154,30 @@ abstract class AventusModel extends Model
             $newOnes = [];
             foreach ($newList as $newItem) {
                 $dataArr = null;
-                if ($newItem instanceof Model) {
-                    if (!isset($newItem->{$relationKey}) || $newItem->{$relationKey} == 0) {
-                        $dataArr = $newItem->toArray();
-                    }
-                } else if (is_object($newItem)) {
-                    if (!isset($newItem->{$relationKey}) || $newItem->{$relationKey} == 0) {
-                        $dataArr = get_object_vars($newItem);
-                    }
+                Console::dump("inside0");
+                Console::dump(get_class($newItem));
+                Console::dump($relationModel);
+                Console::dump("---");
+                if (is_object($newItem) && is_a(get_class($newItem), $relationModel, true)) {
+                    Console::dump("inside1");
+                    $relation->save($newItem);
                 } else {
-                    if (!isset($newItem[$relationKey]) || $newItem[$relationKey] == 0) {
-                        $dataArr = $newItem;
+                    if ($newItem instanceof Model) {
+                        if (!isset($newItem->{$relationKey}) || $newItem->{$relationKey} == 0) {
+                            $dataArr = $newItem->toArray();
+                        }
+                    } else if (is_object($newItem)) {
+                        if (!isset($newItem->{$relationKey}) || $newItem->{$relationKey} == 0) {
+                            $dataArr = get_object_vars($newItem);
+                        }
+                    } else {
+                        if (!isset($newItem[$relationKey]) || $newItem[$relationKey] == 0) {
+                            $dataArr = $newItem;
+                        }
                     }
-                }
-                if ($dataArr != null) {
-                    $newOnes[] = $dataArr;
+                    if ($dataArr != null) {
+                        $newOnes[] = $dataArr;
+                    }
                 }
             }
 
@@ -354,16 +367,10 @@ abstract class AventusModel extends Model
                 if (is_array($value)) {
                     $value = new Collection($value);
                 }
-                $this->setRelation($key, $value);
+                $this->setRelation($method->name, $value);
             }
         }
 
-        if (self::$debug && count($attributes) > 0) {
-            Console::log("--------------------------");
-            Console::log(get_class($this));
-            Console::dump($this);
-            Console::log("--------------------------");
-        }
         if (!$this->only_fillable && count($unfillable) > 0) {
             $deny = $this->preventKeys();
             foreach ($unfillable as $key => $value) {
