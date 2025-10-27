@@ -118,23 +118,23 @@ abstract class AventusModel extends Model
 
     public function syncHasMany($name)
     {
-        if ($this->__isNew()) {
-            Console::dump("inside-1");
-            $this->{$name}()->saveMany($this->{$name});
-        } else {
-            $currentItem = self::find($this->__getPrimary());
-            /** @var HasMany $relation  */
-            $relation = $currentItem->{$name}();
-            $relationKey = $relation->getRelated()->getKeyName();
-            $relationModel = get_class($relation->getRelated());
 
-            $existingIds = $currentItem->{$name}()->pluck($relationKey)->toArray();
-            $newList = $this->{$name};
-            $newIds = $newList->pluck($relationKey)->filter()->toArray();
-            $idsToDelete = array_diff($existingIds, $newIds);
-            $this->{$name}()->whereIn($relationKey, $idsToDelete)->delete();
+        $currentItem = self::find($this->__getPrimary());
+        /** @var HasMany $relation  */
+        $relation = $currentItem->{$name}();
+        $relationKey = $relation->getRelated()->getKeyName();
+        $relationModel = get_class($relation->getRelated());
 
-            foreach ($newList->whereIn($relationKey, $existingIds) as $newItem) {
+        $existingIds = $currentItem->{$name}()->pluck($relationKey)->toArray();
+        $newList = $this->{$name};
+        $newIds = $newList->pluck($relationKey)->filter()->toArray();
+        $idsToDelete = array_diff($existingIds, $newIds);
+        $this->{$name}()->whereIn($relationKey, $idsToDelete)->delete();
+
+        foreach ($newList->whereIn($relationKey, $existingIds) as $newItem) {
+            if (is_object($newItem) && is_a(get_class($newItem), $relationModel, true)) {
+                $relation->save($newItem);
+            } else {
                 $dataArr = [];
                 if ($newItem instanceof Model) {
                     $updateItem = $this->{$name}()->find($newItem->{$relationKey});
@@ -150,58 +150,43 @@ abstract class AventusModel extends Model
                 $updateItem->fill($dataArr);
                 $updateItem->save();
             }
+        }
 
-            $newOnes = [];
-            foreach ($newList as $newItem) {
+        foreach ($newList as $newItem) {
+            if (is_object($newItem) && is_a(get_class($newItem), $relationModel, true)) {
+                $relation->save($newItem);
+            } else {
                 $dataArr = null;
-                Console::dump("inside0");
-                Console::dump(get_class($newItem));
-                Console::dump($relationModel);
-                Console::dump("---");
-                if (is_object($newItem) && is_a(get_class($newItem), $relationModel, true)) {
-                    Console::dump("inside1");
-                    $relation->save($newItem);
-                } else {
-                    if ($newItem instanceof Model) {
-                        if (!isset($newItem->{$relationKey}) || $newItem->{$relationKey} == 0) {
-                            $dataArr = $newItem->toArray();
-                        }
-                    } else if (is_object($newItem)) {
-                        if (!isset($newItem->{$relationKey}) || $newItem->{$relationKey} == 0) {
-                            $dataArr = get_object_vars($newItem);
-                        }
-                    } else {
-                        if (!isset($newItem[$relationKey]) || $newItem[$relationKey] == 0) {
-                            $dataArr = $newItem;
-                        }
+                if ($newItem instanceof Model) {
+                    if (!isset($newItem->{$relationKey}) || $newItem->{$relationKey} == 0) {
+                        $dataArr = $newItem->toArray();
                     }
-                    if ($dataArr != null) {
-                        $newOnes[] = $dataArr;
+                } else if (is_object($newItem)) {
+                    if (!isset($newItem->{$relationKey}) || $newItem->{$relationKey} == 0) {
+                        $dataArr = get_object_vars($newItem);
+                    }
+                } else {
+                    if (!isset($newItem[$relationKey]) || $newItem[$relationKey] == 0) {
+                        $dataArr = $newItem;
                     }
                 }
-            }
-
-            if (count($newOnes) > 0) {
-                $this->{$name}()->createMany($newOnes);
+                if ($dataArr != null) {
+                    $createItem = new $relationModel($dataArr);
+                    $createItem->save();
+                }
             }
         }
     }
 
     public function syncHasOne($name)
     {
+        /** @var HasOne $relation  */
         $relation = $this->{$name}();
-
-
-        if ($this->__isNew()) {
-            if ($this->{$name}) {
-                $relation->save($this->{$name});
-            }
-            return;
-        }
 
         $currentItem = self::find($this->__getPrimary());
         $existingItem = $currentItem->{$name};
         $newItem = $this->{$name};
+        $relationModel = get_class($relation->getRelated());
 
         if (!$newItem) {
             if ($existingItem) {
@@ -213,30 +198,34 @@ abstract class AventusModel extends Model
         $relationKey = $relation->getRelated()->getKeyName();
 
         if ($existingItem) {
-            if ($newItem instanceof Model) {
-                if ($newItem->{$relationKey} && $existingItem->{$relationKey} === $newItem->{$relationKey}) {
-                    $existingItem->fill($newItem->toArray());
-                    $existingItem->save();
-                } else {
-                    $existingItem->delete();
-                    $relation->save($newItem);
-                }
-            } else if (is_object($newItem)) {
-                if ($newItem->{$relationKey} && $existingItem->{$relationKey} === $newItem->{$relationKey}) {
-                    $dataArr = get_object_vars($newItem);
-                    $existingItem->fill($dataArr);
-                    $existingItem->save();
-                } else {
-                    $existingItem->delete();
-                    $relation->save($newItem);
-                }
+            if (is_object($newItem) && is_a(get_class($newItem), $relationModel, true)) {
+                $relation->save($newItem);
             } else {
-                if ($newItem[$relationKey] && $existingItem[$relationKey] === $newItem[$relationKey]) {
-                    $existingItem->fill($newItem);
-                    $existingItem->save();
+                if ($newItem instanceof Model) {
+                    if ($newItem->{$relationKey} && $existingItem->{$relationKey} === $newItem->{$relationKey}) {
+                        $existingItem->fill($newItem->toArray());
+                        $existingItem->save();
+                    } else {
+                        $existingItem->delete();
+                        $relation->save($newItem);
+                    }
+                } else if (is_object($newItem)) {
+                    if ($newItem->{$relationKey} && $existingItem->{$relationKey} === $newItem->{$relationKey}) {
+                        $dataArr = get_object_vars($newItem);
+                        $existingItem->fill($dataArr);
+                        $existingItem->save();
+                    } else {
+                        $existingItem->delete();
+                        $relation->save($newItem);
+                    }
                 } else {
-                    $existingItem->delete();
-                    $relation->save($newItem);
+                    if ($newItem[$relationKey] && $existingItem[$relationKey] === $newItem[$relationKey]) {
+                        $existingItem->fill($newItem);
+                        $existingItem->save();
+                    } else {
+                        $existingItem->delete();
+                        $relation->save($newItem);
+                    }
                 }
             }
         } else {
@@ -246,6 +235,7 @@ abstract class AventusModel extends Model
 
     public function syncBelongsTo($name)
     {
+        /** @var BelongsTo $relation */
         $relation = $this->{$name}();
 
         if ($this->__isNew()) {
@@ -268,8 +258,12 @@ abstract class AventusModel extends Model
         }
 
         $relationKey = $relation->getRelated()->getKeyName();
+        $relationModel = get_class($relation->getRelated());
 
-        if ($newParent instanceof Model) {
+        if (is_object($newParent) && is_a(get_class($newParent), $relationModel, true)) {
+            $newParent->save();
+            $relation->associate($newParent);
+        } else if ($newParent instanceof Model) {
             if ($existingParent && $newParent->{$relationKey} === $existingParent->{$relationKey}) {
                 $existingParent->fill($newParent->toArray());
                 $existingParent->save();
