@@ -2,7 +2,6 @@
 
 namespace Aventus\Laraventus\Models;
 
-use Aventus\Laraventus\Tools\Console;
 use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -172,7 +171,7 @@ abstract class AventusModel extends Model
                 }
                 if ($dataArr != null) {
                     $createItem = new $relationModel($dataArr);
-                    $createItem->save();
+                    $relation->save($createItem);
                 }
             }
         }
@@ -204,7 +203,7 @@ abstract class AventusModel extends Model
                 if ($newItem instanceof Model) {
                     if ($newItem->{$relationKey} && $existingItem->{$relationKey} === $newItem->{$relationKey}) {
                         $existingItem->fill($newItem->toArray());
-                        $existingItem->save();
+                        $relation->save($existingItem);
                     } else {
                         $existingItem->delete();
                         $relation->save($newItem);
@@ -213,7 +212,7 @@ abstract class AventusModel extends Model
                     if ($newItem->{$relationKey} && $existingItem->{$relationKey} === $newItem->{$relationKey}) {
                         $dataArr = get_object_vars($newItem);
                         $existingItem->fill($dataArr);
-                        $existingItem->save();
+                        $relation->save($existingItem);
                     } else {
                         $existingItem->delete();
                         $relation->save($newItem);
@@ -221,7 +220,7 @@ abstract class AventusModel extends Model
                 } else {
                     if ($newItem[$relationKey] && $existingItem[$relationKey] === $newItem[$relationKey]) {
                         $existingItem->fill($newItem);
-                        $existingItem->save();
+                        $relation->save($existingItem);
                     } else {
                         $existingItem->delete();
                         $relation->save($newItem);

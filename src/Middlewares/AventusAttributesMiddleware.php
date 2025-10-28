@@ -16,6 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Aventus\Laraventus\Tools\Type;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Route;
+use ReflectionClass;
 use ReflectionMethod;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -29,6 +30,21 @@ class AventusAttributesMiddleware
 
         if (isset($action['controller'])) {
             [$controllerClass, $method] = explode('@', $action['controller']);
+
+            $refClass = new ReflectionClass($controllerClass);
+            foreach ($refClass->getAttributes() as $attribute) {
+                $instance = $attribute->newInstance();
+                if (is_a($instance, Middleware::class, true)) {
+                    $middlewares = is_array($instance->middlewares)
+                        ? $instance->middlewares
+                        : [$instance->middlewares];
+
+                    foreach ($middlewares as $middlewareClass) {
+                        $middleware = App::make($middlewareClass);
+                        $next = fn($req) => $middleware->handle($req, $next);
+                    }
+                }
+            }
 
             $refMethod = new ReflectionMethod($controllerClass, $method);
 
