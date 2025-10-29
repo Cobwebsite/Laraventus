@@ -5,6 +5,7 @@ namespace Aventus\Laraventus\Tools;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Output\Output;
+use Throwable;
 
 class Console
 {
@@ -38,8 +39,36 @@ class Console
      */
     public static function log($txt)
     {
-        Console::logFct(function () use ($txt) {
-            echo $txt;
+        if ($txt instanceof Throwable) {
+            self::logError($txt);
+        } else {
+            Console::logFct(function () use ($txt) {
+                echo $txt;
+            });
+        }
+    }
+
+    /**
+     * @param $txt
+     * @return void
+     */
+    public static function logError(Throwable $txt, ?int $limit = null)
+    {
+        if ($limit == null) {
+            $limit = config('laraventus.error.stack_limit') ?? 0;
+        }
+        Console::logFct(function () use ($txt, $limit) {
+            echo "Exception: " . $txt->getMessage() . " in " . $txt->getFile() . ":" . $txt->getLine() . "\n";
+            echo "Stack trace:\n";
+            if ($limit <= 0) {
+                echo $txt->getTraceAsString();
+            } else {
+                $traces = $txt->getTrace();
+                for ($i = 0; $i < count($traces) && $i < $limit; $i++) {
+                    $trace = $traces[$i];
+                    echo "   #$i " . $trace['file'] . "(" . $trace['line'] . "): " . $trace['class'] . $trace['type'] . $trace['function'] . "\n";
+                }
+            }
         });
     }
 
@@ -50,10 +79,10 @@ class Console
         });
     }
 
-    public static function trace()
+    public static function trace(int $limit = 10)
     {
-        Console::logFct(function () {
-            debug_print_backtrace();
+        Console::logFct(function () use ($limit) {
+            debug_print_backtrace(0, $limit);
         });
     }
 

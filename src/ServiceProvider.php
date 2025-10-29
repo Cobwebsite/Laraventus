@@ -2,7 +2,10 @@
 
 namespace Aventus\Laraventus;
 
+use Aventus\Laraventus\Middlewares\RouteMatchedSubscriber;
 use Aventus\Laraventus\Routes\ResourceRegistrar;
+use Aventus\Laraventus\Tools\Console;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider as SP;
 use Illuminate\Support\Facades\Route;
 
@@ -30,5 +33,10 @@ class ServiceProvider extends SP
             $registrar = app('Aventus\Laraventus\Routes\ResourceRegistrar');
             return $registrar->register($name, $controller, $options);
         });
+
+        $watchCtrl = config('laraventus.controller.attributes') ?? true;
+        if ($watchCtrl) {
+            Event::subscribe(RouteMatchedSubscriber::class);
+        }
     }
 }
