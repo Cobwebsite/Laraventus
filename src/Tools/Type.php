@@ -2,15 +2,11 @@
 
 namespace Aventus\Laraventus\Tools;
 
-use Aventus\Laraventus\Parser\FileVisitor;
+use Carbon\Carbon;
+use DateTime;
 use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
-use InvalidArgumentException;
-use PhpParser\Modifiers;
-use ReflectionClass;
-use ReflectionNamedType;
-use ReflectionProperty;
 use UnitEnum;
 
 class Type
@@ -19,7 +15,7 @@ class Type
      * List all types that don't need a $type
      * @var string[]
      */
-    private static $avoidEnrich = [\Carbon\Carbon::class];
+    private static $avoidEnrich = [Carbon::class, DateTime::class];
 
     /**
      * Add a type that don't need a $type
@@ -40,7 +36,6 @@ class Type
                 $item = Type::enrich($item);
             }
         } else if (is_object($data) && !($data instanceof UnitEnum)) {
-
             foreach (self::$avoidEnrich as $class) {
                 if (is_a($data, $class, true)) {
                     return $data;
