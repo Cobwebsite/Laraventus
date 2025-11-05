@@ -27,11 +27,12 @@ abstract class AventusModelResource extends AventusResource
     }
 
     /**
-     * @param T $item
+     * @param ?T $item
      */
-    public function __construct($item)
+    public function __construct($item = null)
     {
-        $this->bind($item);
+        if ($item != null)
+            $this->bind($item);
     }
 
     /**

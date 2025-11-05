@@ -132,6 +132,7 @@ abstract class AventusModel extends Model
 
         foreach ($newList->whereIn($relationKey, $existingIds) as $newItem) {
             if (is_object($newItem) && is_a(get_class($newItem), $relationModel, true)) {
+                $newItem->exists = true;
                 $relation->save($newItem);
             } else {
                 $dataArr = [];
@@ -147,6 +148,7 @@ abstract class AventusModel extends Model
                 }
 
                 $updateItem->fill($dataArr);
+                $updateItem->exists = true;
                 $updateItem->save();
             }
         }

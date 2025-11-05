@@ -357,9 +357,6 @@ class AventusRequest extends FormRequest
                                     $default = new Collection();
                                 }
 
-                                Console::log("--------------------------------------");
-                                Console::log("save links : " . $part . " " . $obj->saveLinks[$part]);
-
                                 if (!$obj->relationLoaded($part)) {
                                     $obj->setRelation($part, $default);
                                 }
