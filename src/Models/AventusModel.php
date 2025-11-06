@@ -200,6 +200,7 @@ abstract class AventusModel extends Model
 
         if ($existingItem) {
             if (is_object($newItem) && is_a(get_class($newItem), $relationModel, true)) {
+                $newItem->exists = true;
                 $relation->save($newItem);
             } else {
                 if ($newItem instanceof Model) {
