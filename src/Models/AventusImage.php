@@ -14,6 +14,7 @@ abstract class AventusImage extends AventusFile
     {
         if ($this->upload != null) {
             $file = $this->upload;
+            $this->upload = null;
             $fs = $this->define_filesystem();
             $base_directory = $this->get_save_directory($model);
             $filename = $this->get_file_name($file);

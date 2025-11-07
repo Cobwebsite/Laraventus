@@ -9,6 +9,7 @@ use Aventus\Laraventus\Requests\ItemsManyRequest;
 use Aventus\Laraventus\Resources\AventusModelResource;
 use Aventus\Laraventus\Tools\Console;
 use Exception;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -65,8 +66,17 @@ abstract class ModelController
      */
     public function index(): array
     {
-        return $this->defineResource()::collection($this->defineModel()::all());
+        return $this->defineResource()::collection($this->indexAction());
     }
+
+    /**
+     * @return Collection<int, T>
+     */
+    protected function indexAction(): Collection
+    {
+        return $this->defineModel()::all();
+    }
+
 
     /**
      * Store a newly created resource in storage.

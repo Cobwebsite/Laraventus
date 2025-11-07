@@ -5,7 +5,11 @@ namespace Aventus\Laraventus\Tools;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Database\Eloquent\Model;
+use InvalidArgumentException;
 use JsonSerializable;
+use ReflectionClass;
+use ReflectionNamedType;
+use ReflectionUnionType;
 
 class Json
 {
@@ -56,17 +60,17 @@ class Json
                     if (is_a($type, Model::class, true)) {
                         return new $type($obj);
                     } else {
-                       $result = new $type();
+                        $result = new $type();
+
                         foreach ($obj as $key => $value) {
+                            if ($value == null && !self::isPropertyNullable($type, $key)) continue;
                             $result->{$key} = $value;
                         }
                         return $result;
                     }
                 }
             }
-        }
-
-        else if (is_object($obj)) {
+        } else if (is_object($obj)) {
             foreach ($obj as $key => $value) {
                 $obj->$key = self::toClassObj($value);
             }
@@ -87,5 +91,40 @@ class Json
         }
 
         return $obj;
+    }
+
+    public static function isPropertyNullable(string $className, string $propertyName): bool
+    {
+        if (!class_exists($className)) {
+            throw new InvalidArgumentException("La classe '$className' n'existe pas.");
+        }
+
+        $reflection = new ReflectionClass($className);
+
+        if (!$reflection->hasProperty($propertyName)) {
+            throw new InvalidArgumentException("La propriété '$propertyName' n'existe pas dans la classe '$className'.");
+        }
+
+        $property = $reflection->getProperty($propertyName);
+        $type = $property->getType();
+
+        if (!$type) {
+            // Pas de type déclaré → PHP autorise null par défaut
+            return true;
+        }
+
+        if ($type instanceof ReflectionNamedType) {
+            return $type->allowsNull();
+        }
+
+        if ($type instanceof ReflectionUnionType) {
+            foreach ($type->getTypes() as $t) {
+                if ($t->getName() === 'null') {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

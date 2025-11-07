@@ -65,19 +65,12 @@ abstract class AventusFile implements CastsAttributes
     {
         if ($this->upload != null) {
             $file = $this->upload;
+            $this->upload = null;
             $fs = $this->define_filesystem();
             $base_directory = $this->get_save_directory($model);
             $filename = $this->get_file_name($file);
             $path = $fs->putFileAs($base_directory, $file, $filename);
             $this->uri = $this->get_uri($path);
-
-            // $mimeType = $file->getMimeType();
-            // if ($mimeType !== 'image/svg+xml') {
-            //     $image = ImageManager::gd()->read($file->getContent());
-            //     $image->resizeDown(width: 2000);
-            //     $saveName = str_replace($file->getClientOriginalExtension(), "webp", $saveName);
-            //     $image->save($base_directory . '/' . $saveName, ['format' => 'webp']);
-            // }
         }
     }
 

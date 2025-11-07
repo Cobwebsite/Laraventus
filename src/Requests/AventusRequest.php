@@ -9,6 +9,7 @@ use Aventus\Laraventus\Models\AventusModel;
 use Aventus\Laraventus\Requests\Rules\Boolean;
 use Aventus\Laraventus\Tools\Console;
 use Aventus\Laraventus\Tools\Json;
+use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -192,6 +193,19 @@ class AventusRequest extends FormRequest
         }
     }
 
+    /**
+     * @param array<string, \Illuminate\Http\UploadedFile|\Illuminate\Http\UploadedFile[]> $files
+     */
+    private function bindFiles($files, $obj)
+    {
+        foreach ($files as $name => $file) {
+            if (is_array($file)) {
+                $this->bindFiles($file, $obj->{$name});
+            } else if ($file instanceof UploadedFile) {
+                $obj->{$name} = $file;
+            }
+        }
+    }
     private function bindProperties()
     {
         AventusModel::$debug = true;
@@ -205,6 +219,12 @@ class AventusRequest extends FormRequest
             $prevents[] = $property->getName();
         }
 
+        $files = [];
+        foreach ($this->allFiles() as $name => $file) {
+            if (is_array($file)) {
+                $files[$name] = $file;
+            }
+        }
         foreach ($properties as $property) {
             $name = $property->getName();
             if (in_array($name, $prevents))
@@ -217,6 +237,10 @@ class AventusRequest extends FormRequest
             $valueTemp = Json::toClassObj($this->input($name));
             if (isset($this->$name) && $valueTemp == null) {
                 continue;
+            }
+
+            if (array_key_exists($name, $files)) {
+                $this->bindFiles($files[$name], $valueTemp);
             }
 
             if (array_key_exists($name, $this->arrayClassToCreate)) {
